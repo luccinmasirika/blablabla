@@ -8,7 +8,7 @@ export default function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">About</h3>
             <p className="text-gray-400">
-              I'm a full-stack developer passionate about creating beautiful and functional web applications. I specialize in React, Next.js, and modern web technologies.
+              I&apos;m a full-stack developer passionate about creating beautiful and functional web applications. I specialize in React, Next.js, and modern web technologies.
             </p>
           </div>
 
@@ -82,7 +82,16 @@ export default function Footer() {
 
         <div className="mt-12 pt-8 border-t border-gray-800 text-center">
           <p className="text-gray-400">
-            © {new Date().getFullYear()} Luccin Masirika. All rights reserved.
+            © {new Date().getFullYear()}{' '}
+            <a
+              href="https://luccinmasirika.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-blue-400 transition-colors duration-300"
+            >
+              Luccin Masirika
+            </a>
+            . All rights reserved.
           </p>
         </div>
       </div>
