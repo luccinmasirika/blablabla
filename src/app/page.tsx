@@ -1,101 +1,124 @@
-import Image from "next/image";
+'use client';
+
+import { useAtom } from 'jotai';
+import { useCallback, useEffect, useMemo } from 'react';
+import { debounce } from 'lodash';
+import Masonry from 'react-masonry-css';
+import { searchQueryAtom, filteredPostsAtom, currentPageAtom, postsPerPageAtom } from '@/store/posts';
+import { usePosts } from '@/hooks/usePosts';
+import PostCard from '@/components/PostCard';
+import SearchBar from '@/components/SearchBar';
+import Pagination from '@/components/Pagination';
+
+const breakpointColumns = {
+  default: 3,
+  1280: 3,
+  1024: 2,
+  640: 1
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const { posts, isLoading, isError } = usePosts();
+  const [searchQuery, setSearchQuery] = useAtom(searchQueryAtom);
+  const [filteredPosts, setFilteredPosts] = useAtom(filteredPostsAtom);
+  const [currentPage, setCurrentPage] = useAtom(currentPageAtom);
+  const [postsPerPage] = useAtom(postsPerPageAtom);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      if (!posts) return;
+      const filtered = posts.filter(
+        (post) =>
+          post.title.toLowerCase().includes(query.toLowerCase()) ||
+          post.body.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredPosts(filtered);
+      setCurrentPage(1); // Reset to first page when searching
+    }, 300),
+    [posts]
+  );
+
+  useEffect(() => {
+    if (posts) {
+      debouncedSearch(searchQuery);
+    }
+    return () => {
+      debouncedSearch.cancel();
+    };
+  }, [searchQuery, posts, debouncedSearch]);
+
+  const paginatedPosts = useMemo(() => {
+    const startIndex = (currentPage - 1) * postsPerPage;
+    return filteredPosts.slice(startIndex, startIndex + postsPerPage);
+  }, [filteredPosts, currentPage, postsPerPage]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(filteredPosts.length / postsPerPage);
+  }, [filteredPosts.length, postsPerPage]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="relative">
+          <div className="w-12 h-12 border-4 border-blue-500/20 rounded-full animate-spin" />
+          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-500 text-xl mb-2">Error loading posts</div>
+          <p className="text-gray-400">Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <main className="py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+          Posts
+        </h1>
+        <p className="text-gray-400">Browse through our collection of posts</p>
+      </div>
+
+      <SearchBar
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+      />
+
+      <div className="mt-12">
+        <Masonry
+          breakpointCols={breakpointColumns}
+          className="flex -ml-6 w-auto"
+          columnClassName="pl-6 bg-clip-padding"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          {paginatedPosts.map((post) => (
+            <div key={post.id} className="mb-6">
+              <PostCard post={post} />
+            </div>
+          ))}
+        </Masonry>
+      </div>
+
+      {filteredPosts.length === 0 && (
+        <div className="text-center mt-12">
+          <p className="text-gray-400">No posts found matching your search</p>
+        </div>
+      )}
+
+      {filteredPosts.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
+      )}
+    </main>
   );
 }
