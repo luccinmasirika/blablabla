@@ -9,6 +9,7 @@ import { usePosts } from '@/hooks/usePosts';
 import PostCard from '@/components/PostCard';
 import SearchBar from '@/components/SearchBar';
 import Pagination from '@/components/Pagination';
+import { Post } from '@/types/post';
 
 const breakpointColumns = {
   default: 3,
@@ -28,12 +29,12 @@ export default function Home() {
     debounce((query: string) => {
       if (!posts) return;
       const filtered = posts.filter(
-        (post) =>
+        (post: Post) =>
           post.title.toLowerCase().includes(query.toLowerCase()) ||
           post.body.toLowerCase().includes(query.toLowerCase())
       );
       setFilteredPosts(filtered);
-      setCurrentPage(1); // Reset to first page when searching
+      setCurrentPage(1);
     }, 300),
     [posts]
   );
